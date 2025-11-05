@@ -10,13 +10,15 @@ let transaction_open = false;
 const lines = [];
 
 const one_sql_line = () => {
-  while (true) {
-    let line = lines.shift();
-    if (line == undefined) return line;
-    line = line.trim();
-    if (line.length === 0 || line[0] === "#") continue; // skip comments and blank lines
-    return line;
+  let statement = "";
+
+  while (lines.length > 0) {
+    const line = lines.shift().trim();
+    if (line.length === 0 || line.startsWith("#")) continue;
+    statement += " " + line;
+    if (line.includes(";")) break; // If a semicolon is found, the statement is complete
   }
+  return statement.trim() || undefined;
 };
 
 function parameterizeOrderId(sql) {

@@ -5,12 +5,16 @@ function syncfunc() {
 
 async function asyncCaller() {
     console.log("About to wait.")
-    const res = await syncfunc()
+    const res = syncfunc()
+    console.log(`***************In asyncCaller the syncFunc of type ${typeof res}`)
+    if (typeof res == "string") {
+    console.log(`**************That object is of class ${res.constructor.name}`)
+}
     console.log(res)
     return "asyncCaller complete."
 }
 
-console.log("Calling asyncCaller.")
+console.log("Calling asyncCaller")
 const r = asyncCaller()
 console.log(`Got back a value from asyncCaller of type ${typeof r}`)
 if (typeof r == "object") {

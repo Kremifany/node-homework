@@ -18,10 +18,10 @@ const setJwtCookie = (req, res, user) => {
     sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     maxAge: 3600000, // 1 hour expiration.  Ends up as max-age 3600 in the cookie.
   });
-  return payload.csrfToken; // this is needed in the body returned by login() or register()
+  return payload.csrfToken; // this is needed in the body returned by logon() or register()
 };
 
-const login = async (req, res) => {
+const logon = async (req, res) => {
   const { user, isValid } = await verifyUserPassword(
     req?.body?.email,
     req?.body?.password,
@@ -66,4 +66,4 @@ const logoff = async (req, res) => {
   res.sendStatus(StatusCodes.OK);
 };
 
-module.exports = { login, register, logoff };
+module.exports = { logon, register, logoff };

@@ -12,7 +12,7 @@ const {
   update,
   deleteTask,
 } = require("../controllers/taskController");
-const { register, logoff, login } = require("../controllers/userController");
+const { register, logoff, logon } = require("../controllers/userController");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 const { createUser } = require("../services/userService");
 const waitForRouteHandlerCompletion = require("./waitForRouteHandlerCompletion");
@@ -60,7 +60,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("testing login, register, and logoff", () => {
+describe("testing logon, register, and logoff", () => {
   it("You can register a user.", async () => {
     const req = httpMocks.createRequest({
       method: "POST",
@@ -80,7 +80,7 @@ describe("testing login, register, and logoff", () => {
       body: { email: "jim@sample.com", password: "Pa$$word20" },
     });
     saveRes = MockResponseWithCookies();
-    await waitForRouteHandlerCompletion(login, req, saveRes);
+    await waitForRouteHandlerCompletion(logon, req, saveRes);
     expect(saveRes.statusCode).toBe(200); // success!
   });
   it("A string in the Set-Cookie array starts with jwt=.", () => {
@@ -101,7 +101,7 @@ describe("testing login, register, and logoff", () => {
       body: { email: "jim@sample.com", password: "bad password" },
     });
     saveRes = MockResponseWithCookies();
-    await waitForRouteHandlerCompletion(login, req, saveRes);
+    await waitForRouteHandlerCompletion(logon, req, saveRes);
     expect(saveRes.statusCode).toBe(401);
   });
   it("You can't register again with the same email.", async () => {
@@ -136,7 +136,7 @@ describe("testing login, register, and logoff", () => {
       body: { email: "manuel@sample.com", password: "Pa$$word20" },
     });
     saveRes = MockResponseWithCookies();
-    await waitForRouteHandlerCompletion(login, req, saveRes);
+    await waitForRouteHandlerCompletion(logon, req, saveRes);
     expect(saveRes.statusCode).toBe(200);
   });
   it("You can now logoff.", async () => {

@@ -17,6 +17,7 @@ afterAll(() => {
 	logSpy.mockRestore();
 	errorSpy.mockRestore();
 	warnSpy.mockRestore();
+	app.close();
 });
 
 describe("Middleware Integration", () => {

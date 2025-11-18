@@ -17,14 +17,23 @@ let saveRes = null;
 let saveData = null;
 let saveTaskId = null;
 
-beforeAll(async () => {
-  try {
-    await pool.query('DELETE FROM tasks');
-    await pool.query('DELETE FROM users');
-  } catch (err) {
-    console.error("Error: The tables are not set up in the test database!");
-    throw err;
-  }
+describe("test that database and tables exist", () => {
+  it("connects to database", async () => {
+    let databaseExists = true;
+    try {
+      await pool.query("SELECT 1;");
+    } catch (err) {
+      console.log("Error: the test database hasn't been created.");
+      databaseExists = false;
+    }
+    expect(databaseExists).toBe(true);
+  });
+  it("clears the tasks table", async () => {
+    expect(await pool.query("DELETE FROM tasks;")).not.toThrow();
+  });
+  it("clears the users table", async () => {
+    expect(await pool.query("DELETE FROM users;")).not.toThrow();
+  });
 });
 
 afterAll(async () => {

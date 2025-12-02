@@ -1,5 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
-const {ValidationError, NotFoundError, UnauthorizedError} = require('../errors/customErrors')
+const {ValidationError, NotFoundError, UnauthorizedError} = require('../errors/errors')
 const errorHandlerMiddleware = (err, req, res, next) => {
   console.error(
     "--------------------error: \n",

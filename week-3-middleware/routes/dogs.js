@@ -3,8 +3,6 @@ const router = express.Router();
 const dogs = require("../dogData.js");
 const { ValidationError,NotFoundError  } = require("../errors/errors");
 
-
-
 router.get("/dogs", (req, res) => {
 	res.json(dogs);
 });
@@ -17,7 +15,6 @@ router.post("/adopt", (req, res) => {
     if (dogName === "Nonexistent Dog") {
     throw new NotFoundError("Resource not found or not available");
   }
-
     return res.status(201).json({
         message: `Adoption request received. We will contact you at ${email} for further details.`,
     });

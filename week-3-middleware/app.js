@@ -1,9 +1,10 @@
 const express = require('express');
-const { NotFoundError, UnauthorizedError} = require('./errors/errors')
 const addRequestIdMiddleware = require("./middleware/add-requestId");
 const logMiddleware = require("./middleware/log");
 const validateContentTypeMiddleware = require("./middleware/validate-content-header");
-const notFoundHandlerMiddleware = require("./middleware/not-found")
+const notFoundHandlerMiddleware = require("./middleware/not-found");
+const setSecurityHeadersMiddleware =require("./middleware/set-security-headers");
+
 const path = require('path');
 const dogsRouter = require('./routes/dogs');
 const errorHandler = require("./middleware/error-handler");
@@ -17,6 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Your middleware here
 app.use(addRequestIdMiddleware);
 app.use(logMiddleware);
+app.use(setSecurityHeadersMiddleware);
 
 
 

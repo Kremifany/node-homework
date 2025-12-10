@@ -1,12 +1,20 @@
 
 const StatusCodes = require("http-status-codes")
+const { userSchema } = require("../validation/userSchema")
+
 
 const register = (req, res) => {
+    if (!req.body) req.body = {};
+ 
     const newUser = {...req.body};
-     // this makes a copy
+    const {error, value} = userSchema.validate(newUser, {abortEarly: false})
+    if(error) return res.status(400).json({message: error.message});
+    
+    // this makes a copy of
+
     console.log("Registering new user: ", newUser);
-    global.users.push(newUser);
-    global.user_id = newUser;  // After the registration step, the user is set to logged on.
+    global.users.push(value);
+    global.user_id = value;  // After the registration step, the user is set to logged on.
     delete req.body.password;
     console.log("Registered new user without password ", req.body);
     return res.status(201).json(req.body);

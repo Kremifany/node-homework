@@ -1,4 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
+const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 const taskCounter = (() => {
   let lastTaskNumber = 0;
   return () => {
@@ -8,7 +9,10 @@ const taskCounter = (() => {
 })();
 
 const create = (req, res) => {
-    const newTask = {...req.body, id: taskCounter(), userId: global.user_id.email,isCompleted: false};
+  if (!req.body) req.body = {};
+  const {error, value} = taskSchema.validate(req.body, {abortEarly: false})
+    if(error) return res.status(400).json({message: error.message});
+    const newTask = {...value, id: taskCounter(), userId: global.user_id.email,isCompleted: false};
     global.tasks.push(newTask);
     const { userId, ...sanitizedTask } = newTask;// make a copy without userId 
 // we don't send back the userId! This statement removes it.
@@ -50,11 +54,13 @@ const update = (req,res) => {
     if (!taskIdToUpdate) {
       return res.status(400).json({message: "The task ID passed is not valid."})
     }
+    const {error, value} = patchTaskSchema.validate(req.body, {abortEarly: false})
+    if(error) return res.status(400).json({message: error.message});
     const taskIndex = global.tasks.findIndex((task) => task.id === taskIdToUpdate && task.userId === global.user_id.email);
     if (taskIndex === -1) {
       return res.status(StatusCodes.NOT_FOUND).json({message: "That task was not found or user not owns it"});
     }
-    Object.assign(global.tasks[taskIndex], req.body)
+    Object.assign(global.tasks[taskIndex], value)
     // const updatedTask = { ..., ...req.body, userId: global.user_id.email };
     // global.tasks[taskIndex] = updatedTask;
     const { userId, ...sanitizedTask } = global.tasks[taskIndex];

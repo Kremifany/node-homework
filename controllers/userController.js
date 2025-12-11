@@ -18,15 +18,16 @@ async function comparePassword(inputPassword, storedHash) {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
 }
 
-const register =  (req, res) => {
+const register =  async(req, res) => {
     if (!req.body) req.body = {};
     const {error, value} = userSchema.validate(req.body, {abortEarly: false})
     if(error) return res.status(400).json({message: error.message});
 
     const { password } = value;
     if (password) {
-      hashPassword(password)
-        .then((hashedPassword) => {
+      try{  
+        const hashedPassword = await hashPassword(password)
+        if(hashedPassword){
           value.password = hashedPassword;
           console.log("value",value)
           console.log("Registering new user: ", value);
@@ -35,38 +36,45 @@ const register =  (req, res) => {
           const { password, ...sanitizedUser } = value;
           console.log("Registered new user without password ", sanitizedUser);
           return res.status(201).json(sanitizedUser);
-        })
-        .catch((err) => {
+        }
+      }
+      catch(error){
+        if (error instanceof Error) {
+          console.error("Error hashing password:", error.message);
+          return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing registration." });
+        } else {
+          const err = new Error("Unknown error during password hashing");   
           console.error("Error hashing password:", err);
-          res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing registration." });
-        });
+          return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing registration." });
+        };
+      } 
     }
-    
-    
+    return res.status(StatusCodes.BAD_REQUEST).json({ message: "Password is required." });
 }
 
-const logon = (req, res) => {
+const logon = async (req, res) => {
     const foundUser = global.users.find((el) => req.body.email === el.email )
-    
+    try{ 
     if(foundUser){
         console.log("Found user for authentication: ", foundUser);
         console.log("req.body.password", req.body.password);
-        comparePassword(req.body.password, foundUser.password)
-         .then((isMatch) => {if(isMatch) {
+        
+          const isMatch = await comparePassword(req.body.password, foundUser.password)
+          if(isMatch) {
             global.user_id = foundUser;
             console.log("Authentication succesfull: ", foundUser);
             return res.status(StatusCodes.OK).json({"name": foundUser.name, "email": foundUser.email});
+            }else{
+            return res.status(StatusCodes.UNAUTHORIZED).json({message: "Authentication Failed"})
             }
-        return res.status(StatusCodes.UNAUTHORIZED).json({message: "Authentication Failed"})
-        })
-
-         .catch((err) => {
-            console.error("Error comparing password:", err);
-            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing logon." });
-         });
-        }else{
+       
+       
+      }else{
         return res.status(StatusCodes.UNAUTHORIZED).json({message: "Authentication Failed"})
     }
+      }catch{
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing logon." });
+         }
 }   
 
 const logoff = (req, res) =>{

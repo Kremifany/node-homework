@@ -11,7 +11,7 @@ const {
   deleteTask,
   bulkCreate,
 } = require("../controllers/taskController");
-const { login, register, logoff } = require("../controllers/userController");
+const { logon, register, logoff } = require("../controllers/userController");
 const {
   getUserAnalytics,
   getUsersWithStats,
@@ -35,7 +35,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("testing login, register, and logoff with transactions", () => {
+describe("testing logon, register, and logoff with transactions", () => {
   it("You can register a user with welcome tasks.", async () => {
     const req = httpMocks.createRequest({
       method: "POST",
@@ -93,7 +93,7 @@ describe("testing login, register, and logoff with transactions", () => {
       body: { email: "jim@sample.com", password: "Pa$$word20" },
     });
     saveRes = httpMocks.createResponse();
-    await login(req, saveRes, () => {});
+    await logon(req, saveRes, () => {});
     expect(saveRes.statusCode).toBe(200); 
   });
 
@@ -108,7 +108,7 @@ describe("testing login, register, and logoff with transactions", () => {
       body: { email: "jim@sample.com", password: "bad password" },
     });
     saveRes = httpMocks.createResponse();
-    await login(req, saveRes, () => {});
+    await logon(req, saveRes, () => {});
     expect(saveRes.statusCode).toBe(401);
   });
 
@@ -151,7 +151,7 @@ describe("testing login, register, and logoff with transactions", () => {
       body: { email: "manuel@sample.com", password: "Pa$$word20" },
     });
     saveRes = httpMocks.createResponse();
-    await login(req, saveRes, () => {});
+    await logon(req, saveRes, () => {});
     expect(saveRes.statusCode).toBe(200);
   });
 

@@ -2,13 +2,21 @@ const express = require("express");
 const app = express();
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
-
-
+const authMiddleware = require("./middleware/auth");
+const taskRouter = require("./routes/taskRoutes"); 
+const userRouter = require("./routes/userRoutes");
+app.use(express.json());
+global.users = [];
+global.tasks = [];
+global.user_id = null; // this will hold the currently logged in user info
 app.use((req,res,next)=>{
-
   console.log("req.path", req.path,"req.method", req.method,"req.query", req.query)
   next()
 })
+
+app.use("/api/users",userRouter);
+app.use("/api/tasks", authMiddleware, taskRouter);
+
 app.get("/", (req, res) => {
   res.send("Hello, World!");
 });

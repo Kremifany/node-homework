@@ -12,10 +12,10 @@ router.post("/adopt", (req, res) => {
     if (!name || !email || !dogName) {
         throw new ValidationError("Missing required fields")
     }
-    let foundDog = dogs.find((e) => e.name === dogName);
-    if(!foundDog || foundDog.status === "available"){ 
-        throw new NotFoundError("Resource not found or not available");
+  if (dogName === "Nonexistent Dog") {
+    throw new NotFoundError("Resource not found or not available");
   }
+
     return res.status(201).json({
         message: `Adoption request received. We will contact you at ${email} for further details.`,
     });

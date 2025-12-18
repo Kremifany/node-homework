@@ -1,23 +1,41 @@
 const express = require("express");
+
 const app = express();
+const { register }  = require("./controllers/userController");
+const userRouter  = require("./routes/userRoutes")
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
 
 
-app.use((req,res,next)=>{
+//storing the data in not persistant  variable
+global.user_id = null;
+global.users = [];
+global.tasks = [];
 
+
+app.use(express.json({ limit: "1kb" }));
+
+app.use((req,res,next)=>{
   console.log("req.path", req.path,"req.method", req.method,"req.query", req.query)
   next()
 })
-app.get("/", (req, res) => {
-  res.send("Hello, World!");
-});
 
-app.post("/testpost", (req,res) => {
-  res.send("testpost")
-  console.log("testpost")
-}
-)
+// app.post("/api/users", (req,res) => {
+//   res.send("/api/users route")
+//   console.log("route: /api/users")
+// }
+// )
+
+
+// app.post("/api/users", (req, res)=>{
+//     console.log("This data was posted", JSON.stringify(req.body));
+//     res.send("parsed the data");
+// });
+
+
+app.use("/api/users", userRouter);
+
+
 // app.get("/", (req, res) => {
 // //   res.send("Hello, World!");
 //   console.log("Hello, World")
@@ -41,6 +59,7 @@ app.post("/testpost", (req,res) => {
 //   }
 // });
 app.use(notFoundHandler);
+
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;

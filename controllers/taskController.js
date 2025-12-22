@@ -49,21 +49,25 @@ const update = async (req,res) => {
     if (!taskIdToUpdate) {
       return res.status(400).json({message: "The task ID passed is not valid."})
     }
-    const {error, updates} = patchTaskSchema.validate(req.body, {abortEarly: false})
+    const {error, value} = patchTaskSchema.validate(req.body, {abortEarly: false})
     if(error) return res.status(400).json({message: error.message});
-const taskChange = new Map(Object.entries(updates));
-const keys = taskChange.keys(updates);
+const taskChange = new Map(Object.entries(value));
+const empty = taskChange.size === 0;
+if (empty) {
+  return res.status(400).json({message: "No valid fields were provided for update."});
+}
+const keys = Array.from(taskChange.keys());
 const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
 const idParm = `$${keys.length + 1}`;
 const userParm = `$${keys.length + 2}`;
-const updatedTask = await pool.query(`UPDATE tasks ${setClauses} 
+const updatedTask = await pool.query(`UPDATE tasks SET ${setClauses} 
   WHERE id = ${idParm} AND user_id = ${userParm} RETURNING id, title, is_completed`, 
-  [...taskChange.values(), req.params.id, global.user_id]);
-
-
-
-    res.json(updatedTask);  
+  [...taskChange.values(), taskIdToUpdate, global.user_id]);
+if (updatedTask.rowCount === 0) {
+  return res.status(StatusCodes.NOT_FOUND).json({message: "That task was not found or user not owns it"});
 }
+    return res.json(updatedTask.rows[0]);  
+}   
 
 const show = (req,res) => {
     const taskIdToShow = parseInt(req.params?.id);

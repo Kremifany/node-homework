@@ -1,3 +1,4 @@
+/* eslint-env jest */
 require("dotenv").config();
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 const pool = require("../db/pg-pool");
@@ -29,10 +30,12 @@ describe("test that database and tables exist", () => {
     expect(databaseExists).toBe(true);
   });
   it("clears the tasks table", async () => {
-    expect(async () => await pool.query("DELETE FROM tasks;")).not.toThrow();
+    console.log("Clearing tasks table");
+    await expect(pool.query("DELETE FROM tasks;")) .resolves.toBeDefined();
   });
   it("clears the users table", async () => {
-    expect(async () => await pool.query("DELETE FROM users;")).not.toThrow();
+    console.log("Clearing users table");
+    await expect(pool.query("DELETE FROM users;")) .resolves.toBeDefined();
   });
 });
 

@@ -8,5 +8,4 @@ router.route("/").post(register);
 router.route("/logon").post(logon);
 
 router.route("/logoff").post(logoff);
-
 module.exports = router;

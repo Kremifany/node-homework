@@ -6,6 +6,7 @@ const httpMocks = require("node-mocks-http");
 const EventEmitter = require("events").EventEmitter;
 const jwt = require("jsonwebtoken");
 const waitForRouteHandlerCompletion = require("./waitForRouteHandlerCompletion");
+let jwtCookie;
 
 const {
   index,
@@ -40,6 +41,7 @@ let user2 = null;
 let saveRes = null;
 let saveData = null;
 let saveTaskId = null;
+let saveReq = null;
 
 beforeAll(async () => {
   await prisma.Task.deleteMany(); // delete all tasks

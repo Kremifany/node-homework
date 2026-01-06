@@ -50,12 +50,15 @@ const task = await prisma.task.delete({
 
 // Get all tasks for logged in user
 const index = async(req,res) => { 
+// Parse pagination parameters
+const page = parseInt(req.query.page) || 1;
+const limit = parseInt(req.query.limit) || 10;
+const skip = (page - 1) * limit;
 
- const tasks = await prisma.task.findMany({
-  where: {
-    userId: global.user_id, // only the tasks for this user!
-  },
-    select: { 
+// Get tasks with pagination and eager loading
+const tasks = await prisma.task.findMany({
+  where: { userId: global.user_id },
+  select: { 
     id: true,
     title: true, 
     isCompleted: true,
@@ -67,15 +70,32 @@ const index = async(req,res) => {
         email: true
       }
     }
-  }
+  },
+  skip: skip,
+  take: limit,
+  orderBy: { createdAt: 'desc' }
 });
 
-if(!tasks.length){
-    return res.status(404).json({message: "No tasks found."});
-}
-   return res.json(tasks);
-}
+// Get total count for pagination metadata
+const totalTasks = await prisma.task.count({
+  where: { userId: global.user_id }
+});
 
+const pagination = {
+  page,//1
+  limit,//10
+  total: totalTasks,
+  pages: Math.ceil(totalTasks / limit),
+  hasNext: page * limit < totalTasks,
+  hasPrev: page > 1
+};
+
+  // Return tasks with pagination information
+  res.status(200).json({
+  tasks,
+  pagination
+});
+};
 
 const update = async (req,res,next) => {  
   if (!req.body) req.body = {};

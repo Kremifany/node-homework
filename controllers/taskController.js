@@ -9,11 +9,12 @@ const create = async (req, res, next) => {
   let task = null;
   const title = value.title;
   const isCompleted = value.isCompleted;
+  const priority = value.priority;
 
 try {
   task = await prisma.task.create({
-    data: { title, isCompleted, userId : global.user_id },
-    select: { id: true, title: true, isCompleted: true} // specify the column values to return
+    data: { title, isCompleted, priority, userId : global.user_id },
+    select: { id: true, title: true, isCompleted: true, priority: true } // specify the column values to return
   });
     console.log("status 201 - task created: ", task);
     return  res.status(StatusCodes.CREATED).json(task);
@@ -36,7 +37,7 @@ const task = await prisma.task.delete({
       id: taskToDelete,
       userId: global.user_id,
     },
-    select: { title: true, isCompleted: true, id: true }});
+    select: { title: true, isCompleted: true, priority: true, id: true }});
   return res.json(task);
 } catch (err) {
   if (err.code === "P2025" ) {
@@ -54,8 +55,21 @@ const index = async(req,res) => {
   where: {
     userId: global.user_id, // only the tasks for this user!
   },
-  select: { title: true, isCompleted: true, id: true }
+    select: { 
+    id: true,
+    title: true, 
+    isCompleted: true,
+    priority: true,
+    createdAt: true,
+    User: {
+      select: {
+        name: true,
+        email: true
+      }
+    }
+  }
 });
+
 if(!tasks.length){
     return res.status(404).json({message: "No tasks found."});
 }
@@ -84,7 +98,7 @@ const task = await prisma.task.update({
       id: taskIdToUpdate,
       userId: global.user_id,
     },
-    select: { title: true, isCompleted: true, id: true }});
+    select: { title: true, isCompleted: true, priority: true, id: true }});
   return res.json(task);
 } catch (err) {
   if (err.code === "P2025" ) {

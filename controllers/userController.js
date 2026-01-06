@@ -4,9 +4,7 @@ const { userSchema } = require("../validation/userSchema")
 const crypto = require("crypto");
 const util = require("util");
 const scrypt = util.promisify(crypto.scrypt);
-// const pool = require("../db/pg-pool");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const  prisma  = require("../db/prisma");
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");

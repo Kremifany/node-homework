@@ -1,7 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma  = require("../db/prisma");
 
 const create = async (req, res, next) => {
   if (!req.body) req.body = {};

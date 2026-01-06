@@ -1,7 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
-const {create, index, deleteTask, update, show } = require("../controllers/taskController");
+const {create, index, deleteTask, update, show, bulkCreate } = require("../controllers/taskController");
 
 router.route("/").get(index);
 
@@ -12,5 +12,7 @@ router.route("/:id").delete(deleteTask);
 router.route("/:id").patch(update); 
 
 router.route("/:id").get(show);
+
+router.route("/bulk").post(bulkCreate);
 
 module.exports = router;

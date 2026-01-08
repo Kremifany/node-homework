@@ -19,7 +19,7 @@ app.use((req,res,next)=>{
 
 app.use("/api/users",userRouter);
 app.use("/api/tasks", authMiddleware, taskRouter);
-app.use("/api/analytics", authMiddleware, analyticRouter);
+app.use("/api/analytics", analyticRouter);
 
 
 

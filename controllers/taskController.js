@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 const prisma  = require("../db/prisma");
+const buildSelect = require("../utils/buildSelect");
 
 const create = async (req, res, next) => {
   if (!req.body) req.body = {};
@@ -48,12 +49,14 @@ const task = await prisma.task.delete({
 }
 }
 
+//INDEX TASKS
 // Get all tasks for logged in user
 const index = async(req,res) => { 
 // Parse pagination parameters
 const page = parseInt(req.query.page) || 1;
 const limit = parseInt(req.query.limit) || 10;
 const skip = (page - 1) * limit;
+let selectFields = {};
 // Build where clause with optional search filter
 const whereClause = { userId: global.user_id };
 
@@ -63,15 +66,26 @@ if (req.query.find) {
     mode: 'insensitive'              // Case-insensitive search (ILIKE in PostgreSQL)
   };
 }
-// Get tasks with pagination and eager loading
-const tasks = await prisma.task.findMany({
-  where: whereClause,
-  select: { 
+if (req.query.fields) {
+  selectFields = buildSelect(req.query.fields);
+  if(!Object.keys(selectFields).every(key => ['id','title','isCompleted','priority','createdAt'].includes(key))) {
+    return res.status(400).json({message: "Invalid field(s) in query parameters."})
+  }
+} else 
+  {
+  selectFields = { 
     id: true,
     title: true, 
     isCompleted: true,
     priority: true,
     createdAt: true,
+  }
+} 
+// Get tasks with pagination and eager loading
+const tasks = await prisma.task.findMany({
+  where: whereClause,
+  select: { 
+    ...selectFields,
     User: {
       select: {
         name: true,
@@ -103,8 +117,10 @@ const pagination = {
   tasks,
   pagination
 });
-};
+}
 
+
+//UPDATE TASK
 const update = async (req,res,next) => {  
   if (!req.body) req.body = {};
   const { error, value } = patchTaskSchema.validate(req.body, {

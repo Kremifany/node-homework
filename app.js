@@ -5,7 +5,7 @@ const notFoundHandler = require("./middleware/not-found");
 const authMiddleware = require("./middleware/auth");
 const taskRouter = require("./routes/taskRoutes"); 
 const userRouter = require("./routes/userRoutes");
-const analyticRouter = require("./routes/analyticsRoutes");
+const analyticsRouter = require("./routes/analyticsRoutes");
 const prisma = require("./db/prisma");
 
 app.use(express.json());
@@ -19,7 +19,7 @@ app.use((req,res,next)=>{
 
 app.use("/api/users",userRouter);
 app.use("/api/tasks", authMiddleware, taskRouter);
-app.use("/api/analytics", analyticRouter);
+app.use("/api/analytics", authMiddleware, analyticsRouter);
 
 
 

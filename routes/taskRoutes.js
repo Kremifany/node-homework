@@ -7,12 +7,14 @@ router.route("/").get(index);
 
 router.route("/").post(create);
 
+router.route("/bulk").post(bulkCreate);
+
 router.route("/:id").delete(deleteTask);
 
 router.route("/:id").patch(update); 
 
 router.route("/:id").get(show);
 
-router.route("/bulk").post(bulkCreate);
+
 
 module.exports = router;

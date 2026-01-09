@@ -1,6 +1,6 @@
 const prisma  = require("../db/prisma");
 
-const usersTaskStats = async (req, res) => {
+const getUsersWithStats = async (req, res) => {
 
 
 // Parse pagination parameters
@@ -58,7 +58,7 @@ res.status(200).json({
 
 
 
-const userProductivity = async (req, res) => {
+const getUserAnalytics = async (req, res) => {
 // Parse and validate user ID
 
 const userId = parseInt(req.params.id);
@@ -66,6 +66,9 @@ if (isNaN(userId)) {
     return res.status(400).json({ error: "Invalid user ID" });
   }
 
+if(prisma.user.findUnique({where: {id: userId}}) === null) {
+    return res.status(404).json({ error: "User not found" });
+  }
 // Use groupBy to count tasks by completion status
 const taskStats = await prisma.task.groupBy({
   by: ['isCompleted'],
@@ -117,7 +120,7 @@ res.status(200).json({
 return;
 }
 
-const taskSearch  = async (req, res) => { 
+const searchTasks  = async (req, res) => { 
   const searchQuery = req.query.q;
     // Validate search query
   if (!searchQuery || searchQuery.trim().length < 2) {
@@ -167,4 +170,4 @@ res.status(200).json({
   count: searchResults.length
 });
   }
-module.exports = { userProductivity, usersTaskStats, taskSearch };
+module.exports = { getUserAnalytics, getUsersWithStats, searchTasks };

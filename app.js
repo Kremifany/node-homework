@@ -5,10 +5,11 @@ const { register }  = require("./controllers/userController");
 const userRouter  = require("./routes/userRoutes")
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
-
-
-//storing the data in not persistant  variable
-global.user_id = null;
+const authMiddleware = require("./middleware/auth");
+const taskRouter = require("./routes/taskRoutes"); 
+const userRouter = require("./routes/userRoutes");
+const pool = require("./db/pg-pool");
+app.use(express.json());
 global.users = [];
 global.tasks = [];
 
@@ -36,6 +37,21 @@ app.use((req,res,next)=>{
 app.use("/api/users", userRouter);
 
 
+app.get("/health", async (req, res) => {
+try {
+  await pool.query("SELECT 1");
+  res.json({ status: "ok", db: "connected" });
+} catch (err) {
+  res.status(500).json({ message: `db not connected, error: ${ err.message }` });
+}
+});
+
+
+app.post("/testpost", (req,res) => {
+  res.send("testpost")
+  console.log("testpost")
+}
+)
 // app.get("/", (req, res) => {
 // //   res.send("Hello, World!");
 //   console.log("Hello, World")
@@ -85,6 +101,7 @@ async function shutdown(code = 0) {
   try {
     await new Promise(resolve => server.close(resolve));
     console.log('HTTP server closed.');
+    await pool.end();
     // If you have DB connections, close them here
   } catch (err) {
     console.error('Error during shutdown:', err);
@@ -105,4 +122,5 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection:', reason);
   shutdown(1);
 });
+
 module.exports = { app, server} ;

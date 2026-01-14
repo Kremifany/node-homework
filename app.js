@@ -1,17 +1,22 @@
 const express = require("express");
+
 const app = express();
+const { register }  = require("./controllers/userController");
+const userRouter  = require("./routes/userRoutes")
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
 const authMiddleware = require("./middleware/auth");
 const taskRouter = require("./routes/taskRoutes"); 
-const userRouter = require("./routes/userRoutes");
 const analyticsRouter = require("./routes/analyticsRoutes");
 const prisma = require("./db/prisma");
 
 app.use(express.json());
 global.users = [];
 global.tasks = [];
-global.user_id = null; // this will hold the currently logged in user info
+
+
+app.use(express.json({ limit: "1kb" }));
+
 app.use((req,res,next)=>{
   console.log("req.path", req.path,"req.method", req.method,"req.query", req.query)
   next()
@@ -39,6 +44,7 @@ app.post("/testpost", (req,res) => {
 )
 
 app.use(notFoundHandler);
+
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;

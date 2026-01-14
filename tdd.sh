@@ -5,6 +5,4 @@ if [ $# -gt 0 ]; then
 else
     pattern="^tdd/.+\\.test\\.js"
 fi
-echo "Running tests matching pattern: $pattern"
-# exit 0
-npx jest --testPathPatterns "$pattern"
+npx jest --testPathPatterns "$pattern" --detectOpenHandles

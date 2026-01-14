@@ -1,10 +1,12 @@
 require("dotenv").config();
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+process.env.RECAPTCHA_BYPASS = process.env.JWT_SECRET;
 const prisma = require("../db/prisma");
 const httpMocks = require("node-mocks-http");
 const EventEmitter = require("events").EventEmitter;
 const jwt = require("jsonwebtoken");
 const waitForRouteHandlerCompletion = require("./waitForRouteHandlerCompletion");
+let jwtCookie;
 
 const {
   index,
@@ -39,6 +41,7 @@ let user2 = null;
 let saveRes = null;
 let saveData = null;
 let saveTaskId = null;
+let saveReq = null;
 
 beforeAll(async () => {
   await prisma.Task.deleteMany(); // delete all tasks
@@ -59,6 +62,7 @@ describe("testing logon, register, and logoff", () => {
         password: "Pa$$word20",
       },
     });
+    req.headers["X-Recaptcha-Test"] = process.env.JWT_SECRET;
     saveRes = httpMocks.createResponse({
       eventEmitter: EventEmitter,
     });
@@ -107,6 +111,7 @@ describe("testing logon, register, and logoff", () => {
         password: "Pa$$word20",
       },
     });
+    req.headers["X-Recaptcha-Test"] = process.env.JWT_SECRET;
     saveRes = httpMocks.createResponse();
     await register(req, saveRes);
     expect(saveRes.statusCode).toBe(400);
@@ -120,6 +125,7 @@ describe("testing logon, register, and logoff", () => {
         password: "Pa$$word20",
       },
     });
+    req.headers["X-Recaptcha-Test"] = process.env.JWT_SECRET;
     saveRes = httpMocks.createResponse();
     await register(req, saveRes);
     expect(saveRes.statusCode).toBe(201);
@@ -503,7 +509,8 @@ describe("function tests of user operations", () => {
         email: "jdeere@example.com",
         password: "Pa$$word20",
       };
-      saveRes = await agent.post("/api/users/register").send(newUser);
+      saveRes = await agent.post("/api/users/register")
+        .set("X-Recaptcha-Test", process.env.JWT_SECRET).send(newUser);
       expect(saveRes.status).toBe(201);
     });
     it("47. Registration returns an object with the expected name.", () => {

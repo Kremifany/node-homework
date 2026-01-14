@@ -1,7 +1,10 @@
 const waitForRouteHandlerCompletion = async (func, req, res) => {
   let next;
-  const promise = new Promise((resolve) => {
-    next = jest.fn(() => resolve());
+  const promise = new Promise((resolve, reject) => {
+    next = jest.fn((err) => {
+      if (err) return reject(err);
+      resolve();
+    });
     res.on("finish", () => {
       resolve();
     });

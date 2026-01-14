@@ -1,5 +1,9 @@
 const express = require("express");
 
+
+const app = express();
+const { register }  = require("./controllers/userController");
+const userRouter  = require("./routes/userRoutes")
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
 const taskRouter = require("./routes/taskRoutes"); 
@@ -26,6 +30,9 @@ app.use(express.json());
 app.use(xss());
 global.users = [];
 global.tasks = [];
+
+
+app.use(express.json({ limit: "1kb" }));
 
 app.use((req,res,next)=>{
   console.log("req.path", req.path,"req.method", req.method,"req.query", req.query)
@@ -54,6 +61,7 @@ app.post("/testpost", (req,res) => {
 )
 
 app.use(notFoundHandler);
+
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;

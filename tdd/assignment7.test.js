@@ -17,6 +17,7 @@ const {
   getUsersWithStats,
   searchTasks,
 } = require("../controllers/analyticsController");
+const errorHandlerMiddleware = require("../middleware/error-handler");
 
 
 let user1 = null;
@@ -306,7 +307,12 @@ describe("testing bulk task operations", () => {
       },
     });
     saveRes = httpMocks.createResponse();
-    await bulkCreate(req, saveRes, () => {});
+    const next = jest.fn((err) => {
+      if (err) {
+        errorHandlerMiddleware(err, req, saveRes, () => {});
+      }
+    });
+    await bulkCreate(req, saveRes, next);
     expect(saveRes.statusCode).toBe(400);
   });
 });

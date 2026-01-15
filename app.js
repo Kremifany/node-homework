@@ -1,13 +1,9 @@
 const express = require("express");
 
-
-const app = express();
-const { register }  = require("./controllers/userController");
 const userRouter  = require("./routes/userRoutes")
 const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
 const taskRouter = require("./routes/taskRoutes"); 
-const userRouter = require("./routes/userRoutes");
 const analyticsRouter = require("./routes/analyticsRoutes");
 const prisma = require("./db/prisma");
 const cookieParser = require("cookie-parser");

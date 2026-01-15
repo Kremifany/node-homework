@@ -5,7 +5,7 @@ const { register, logon, logoff, show } = require("../controllers/userController
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 
 
-router.route("/").post(register);
+router.route("/register").post(register);
 
 router.use(jwtMiddleware);
 

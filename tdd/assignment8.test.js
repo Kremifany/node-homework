@@ -514,7 +514,8 @@ describe("function tests of user operations", () => {
     });
     it("49. You can logon as the newly registered user.", async () => {
       const logonObj = { email: "jdeere@example.com", password: "Pa$$word20" };
-      saveRes = await agent.post("/api/users/logon").send(logonObj);
+      const token = saveRes.body.csrfToken;
+      saveRes = await agent.post("/api/users/logon").set("X-CSRF-TOKEN", token).send(logonObj);
       expect(saveRes.status).toBe(200);
     });
     it("50. See if you are logged in", async () => {

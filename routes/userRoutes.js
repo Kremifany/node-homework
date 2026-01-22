@@ -7,9 +7,9 @@ const jwtMiddleware = require("../middleware/jwtMiddleware");
 
 router.route("/register").post(register);
 
-router.use(jwtMiddleware);
-
 router.route("/logon").post(logon);
+
+router.use(jwtMiddleware);
 
 router.route("/logoff").post(logoff);
 

@@ -8,7 +8,7 @@ const taskSchema = Joi.object({
   title: Joi.string().trim().min(3).max(30).required(),
   //isCompleted field can be of any type
   //It effectively disables validation for this field.
-  isCompleted: Joi.boolean().not(null),
+  isCompleted: Joi.boolean().not(null),                                               
 });
 
 const patchTaskSchema = Joi.object({

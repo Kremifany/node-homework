@@ -9,8 +9,7 @@
     "start": "node app.js",
     "week3": "nodemon ./week-3-middleware/app",
     "lesson9TDD": "NODE_ENV=test jest --testPathPatterns=test/ --verbose --maxWorkers=1 --config ./lesson9TDD/jestConfig/jest.config.js",
-    "dev": "nodemon app",
-    "test": "NODE_ENV=test jest --testPathPatterns=test/ --verbose --maxWorkers=1 --detectOpenHandles"
+    "dev": "nodemon app.js"
   },
   "author": "Code the Dream",
   "license": "MIT",

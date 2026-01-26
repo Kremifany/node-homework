@@ -4,23 +4,23 @@ const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 // console.log("got here");
 // ({error, value } = userSchema.validate(object2))
 describe("user object validation tests", () => {
-  it("1. doesn't permit a trivial password", () => {
+it("1. doesn't permit a trivial password", () => {
     const { error } = userSchema.validate(
       { name: "Bob", email: "bob@sample.com", password: "password" },
       { abortEarly: false },
     );
     expect(
-        error.details.find((detail) => detail.context.key == "password"),
-        ).toBeDefined();
+      error.details.find((detail) => detail.context.key == "password"),
+    ).toBeDefined();
   });
-  it("2.The user schema requires that an email be specified", () => {
+  it("2. The user schema requires that an email be specified.", () => {
     const { error } = userSchema.validate(
-      { name: "Bob", password: "password~123O" },
+      { name: "Bob", password: "Pa$$word123" },
       { abortEarly: false },
     );
     expect(
-        error.details.find((detail) => detail.context.key == "email"),
-        ).toBeDefined();
+      error.details.find((detail) => detail.context.key == "email"),
+    ).toBeDefined();
   });
   it("3. The user schema does not accept an invalid email.", () => {
     const { error } = userSchema.validate(
@@ -76,7 +76,7 @@ describe("task object validation tests", () => {
         error.details.find((detail) => detail.context.key == "title"),
         ).toBeDefined();
   });
-  it("9.If an isCompleted value is specified, it must be valid.", () => {
+  it("9. If an isCompleted value is specified, it must be valid.", () => {
     const { error } = taskSchema.validate(
       { title: "Sample Task", isCompleted: "ddd", priority: "high" },
       { abortEarly: false },

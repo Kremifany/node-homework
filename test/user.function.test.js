@@ -20,6 +20,7 @@ afterAll(async () => {
 
 describe("register a user ", () => {
     let saveRes = null; // we'll declare this out here, so that we can reference it in several tests
+    let csrfToken = null;
     it("46. it creates the user entry", async () => {
         const newUser = {
         name: "John Deere",
@@ -39,12 +40,22 @@ describe("register a user ", () => {
     });
     it("49. You can logon as the newly registered user.", async () => {
         saveRes = await agent.post("/api/users/logon").send({email: "jdeere@example.com",password: "Pa$$word20",});
+        csrf = saveRes.body.csrfToken;
         console.log("SaveRes:", saveRes.body);
         expect(saveRes.status).toBe(200);
     });
-    it("50. You can logoff.", async () => {
-        saveRes = await agent.post("/api/users/logoff").set("X-CSRF-TOKEN", saveRes.body.csrfToken).send();
+    it("50. Verify that you are logged in. ", async () => {
+        saveRes = await agent.post("/api/tasks").set("X-CSRF-TOKEN", csrf).send();
+        expect(saveRes.status).not.toBe(401);
+    });
+
+    it("51. You can logoff.", async () => {
+        saveRes = await agent.post("/api/users/logoff").set("X-CSRF-TOKEN", csrf).send();
         expect(saveRes.status).toBe(200);
+    });
+    it("52. Make sure that you are really logged out", async () => {
+        saveRes = await agent.post("/api/tasks").set("X-CSRF-TOKEN", csrf).send();
+        expect(saveRes.status).toBe(401);
     });
 
 });

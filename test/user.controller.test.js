@@ -6,15 +6,17 @@ const httpMocks = require("node-mocks-http");
 const { register, logoff, logon } = require("../controllers/userController");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 const jwt = require("jsonwebtoken");
-const eventEmmitter = require("events");
+const EventEmmitter = require("events");
 // a few useful globals
 let saveRes = null;
 let saveData = null;
 
 const cookie = require("cookie");
-function MockResponseWithCookies({eventEmitter: EventEmitter}) {
-  const res = httpMocks.createResponse({eventEmitter: EventEmitter});
-  res.cookie = (name, value, options = {}) => { // this adds the function to the res, so that it stores cookies
+function MockResponseWithCookies() {
+  const res = httpMocks.createResponse({
+    eventEmitter: EventEmmitter,
+  });
+  res.cookie = (name, value, options = {}) => {
     const serialized = cookie.serialize(name, String(value), options);
     let currentHeader = res.getHeader("Set-Cookie");
     if (currentHeader === undefined) {
@@ -44,7 +46,7 @@ describe("testing logon, register, and logoff", () => {
       method: "POST",
       body: { name: "Bob", email: "bob@sample.com", password: "Pa$$word20" },
     });
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies()
     await waitForRouteHandlerCompletion(register, req, saveRes);
     expect(saveRes.statusCode).toBe(201); // success!
   });
@@ -53,7 +55,7 @@ describe("testing logon, register, and logoff", () => {
       method: "POST",
       body: { email: "bob@sample.com", password: "Pa$$word20" },
     });
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(logon, req, saveRes);
     expect(saveRes.statusCode).toBe(200); // success!
   });
@@ -77,7 +79,7 @@ it("39. The user can logoff.", async () => {
     const req = httpMocks.createRequest({
     method: "POST",
     });
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(logoff, req, saveRes);
     expect(saveRes.statusCode).toBe(200); // success!
 }); 
@@ -91,7 +93,7 @@ it("41. A logon attempt with a bad password returns a 401.", async () => {
       method: "POST",
       body: { email: "bob@sample.com", password: "Pa$word20" },
     });
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(logon, req, saveRes);
     expect(saveRes.statusCode).toBe(401);
   });
@@ -100,17 +102,17 @@ it("42.You can't register with an email address that is already registered.", as
       method: "POST",
       body: { name: "Bob", email: "bob@sample.com", password: "Pa$$word20" },
     });
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(register, req, saveRes);
     expect(saveRes.statusCode).not.toBe(201); // success!
   });  
 })
 describe("Testing JWT middleware", () =>{
-    it("43.jwtMiddleware Returns a 401 if the JWT cookie is not present in the req.", async () => {
+    it("61. jwtMiddleware Returns a 401 if the JWT cookie is not present in the req.", async () => {
     const req = httpMocks.createRequest({
       method: "POST",
     });
-    saveRes = httpMocks.createResponse({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(jwtMiddleware, req, saveRes);
     expect(saveRes.statusCode).toBe(401);
   }); 
@@ -118,7 +120,7 @@ describe("Testing JWT middleware", () =>{
     const req = httpMocks.createRequest({
       method: "POST"
     })
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken"}, "badSecret", { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     await waitForRouteHandlerCompletion(jwtMiddleware,req,saveRes);
@@ -128,7 +130,7 @@ describe("Testing JWT middleware", () =>{
     const req = httpMocks.createRequest({
       method: "POST"
     })
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     if (!req.headers) {
@@ -142,7 +144,7 @@ describe("Testing JWT middleware", () =>{
     const req = httpMocks.createRequest({
       method: "POST"
     })
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     if (!req.headers) {
@@ -153,7 +155,7 @@ describe("Testing JWT middleware", () =>{
     expect(next).toHaveBeenCalled();
   });
 it("65.Returns a 401 if the JWT is valid but the CSRF token isn't.", async ()=>{
-    saveRes = MockResponseWithCookies({eventEmitter: eventEmmitter.EventEmitter});
+    saveRes = MockResponseWithCookies();
     const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     const req = httpMocks.createRequest({
       method: "POST"

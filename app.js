@@ -7,9 +7,9 @@ const errorHandler = require("./middleware/error-handler");
 const notFoundHandler = require("./middleware/not-found");
 const authMiddleware = require("./middleware/auth");
 const taskRouter = require("./routes/taskRoutes"); 
-const userRouter = require("./routes/userRoutes");
-const pool = require("./db/pg-pool");
+const analyticsRouter = require("./routes/analyticsRoutes");
 const prisma = require("./db/prisma");
+
 app.use(express.json());
 global.users = [];
 global.tasks = [];
@@ -22,30 +22,12 @@ app.use((req,res,next)=>{
   next()
 })
 
-// app.post("/api/users", (req,res) => {
-//   res.send("/api/users route")
-//   console.log("route: /api/users")
-// }
-// )
+app.use("/api/users",userRouter);
+app.use("/api/tasks", authMiddleware, taskRouter);
+app.use("/api/analytics", authMiddleware, analyticsRouter);
 
 
-// app.post("/api/users", (req, res)=>{
-//     console.log("This data was posted", JSON.stringify(req.body));
-//     res.send("parsed the data");
-// });
 
-
-app.use("/api/users", userRouter);
-
-
-// app.get("/health", async (req, res) => {
-// try {
-//   await pool.query("SELECT 1");
-//   res.json({ status: "ok", db: "connected" });
-// } catch (err) {
-//   res.status(500).json({ message: `db not connected, error: ${ err.message }` });
-// }
-// });
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1;`
@@ -60,28 +42,7 @@ app.post("/testpost", (req,res) => {
   console.log("testpost")
 }
 )
-// app.get("/", (req, res) => {
-// //   res.send("Hello, World!");
-//   console.log("Hello, World")
-// });
 
-// app.get("/", (req, res) => {
-//   res.send("Hello, World!");
-//   res.send("Hello, World!");
-// });
-
-// app.get("/", (req, res) => {
-// //   res.send("Hello, World!");
-//   throw(new Error("something bad happened!"));
-// });
-
-
-// app.use((err, req, res, next) => {
-//   console.log(`A server error occurred responding to a ${req.method} request for ${req.url}.`, err.name, err.message, err.stack);
-//   if (!res.headersSent) {
-//     res.status(500).send("A server error occurred.");
-//   }
-// });
 app.use(notFoundHandler);
 
 app.use(errorHandler);

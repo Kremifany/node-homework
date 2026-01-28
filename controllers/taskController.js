@@ -16,10 +16,9 @@ const create = async (req, res, next) => {
 
 try {
   task = await prisma.task.create({
-    data: { title, isCompleted, priority, userId : global.user_id },
+    data: { title, isCompleted, priority, userId : req.user.id },
     select: { id: true, title: true, isCompleted: true, priority: true } // specify the column values to return
   });
-    console.log("status 201 - task created: ", task);
     return  res.status(StatusCodes.CREATED).json(task);
 } catch (err) {
       return next(err);
@@ -38,7 +37,7 @@ try {
 const task = await prisma.task.delete({
     where: {
       id: taskToDelete,
-      userId: global.user_id,
+      userId: req.user.id,
     },
     select: { title: true, isCompleted: true, priority: true, id: true }});
   return res.json(task);
@@ -65,7 +64,7 @@ const { page , limit, find } = value;
 const skip = (page - 1) * limit;
 let selectFields = {};
 // Build where clause with optional search filter
-const whereClause = { userId: global.user_id };
+const whereClause = { userId: req.user.id };
 
   whereClause.title = {
     contains: find,        // Matches %find% pattern
@@ -88,6 +87,7 @@ if (req.query.fields) {
   }
 } 
 // Get tasks with pagination and eager loading
+try{
 const tasks = await prisma.task.findMany({
   where: whereClause,
   select: { 
@@ -103,6 +103,9 @@ const tasks = await prisma.task.findMany({
   take: limit,
   orderBy: { createdAt: 'desc' }
 });
+if(tasks.length === 0) {
+    return res.status(404).json({ message: "No tasks found."})
+}
 
 // Get total count for pagination metadata
 const totalTasks = await prisma.task.count({
@@ -123,6 +126,13 @@ const pagination = {
   tasks,
   pagination
 });
+} catch (err) {
+  if (err.code === "P2025" ) {
+    return res.status(404).json({ message: "The task was not found."})
+  } else {
+    return next(err); // pass other errors to the global error handler
+  } 
+}
 }
 
 
@@ -146,7 +156,7 @@ const task = await prisma.task.update({
     data: value,
     where: {
       id: taskIdToUpdate,
-      userId: global.user_id,
+      userId: req.user.id,
     },
     select: { title: true, isCompleted: true, priority: true, id: true }});
   return res.json(task);
@@ -169,7 +179,7 @@ const show = async (req,res,next) => {
     const task = await prisma.task.findUnique({
     where: {
       id: taskIdToShow,
-      userId: global.user_id,
+      userId: req.user.id,
     },
     select: { title: true, isCompleted: true, id: true,  User: {
       select: {
@@ -215,7 +225,7 @@ const bulkCreate = async (req, res, next) => {
       title: value.title,
       isCompleted: value.isCompleted || false,
       priority: value.priority || 'medium',
-      userId: global.user_id
+      userId: req.user.id
     });
   }
 

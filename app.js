@@ -36,8 +36,8 @@ app.use((req,res,next)=>{
 })
 
 app.use("/api/users",userRouter);
-app.use("/api/tasks", authMiddleware, taskRouter);
-app.use("/api/analytics", authMiddleware, analyticsRouter);
+app.use("/api/tasks", taskRouter);
+app.use("/api/analytics", analyticsRouter);
 
 
 

@@ -126,7 +126,7 @@ describe("Testing JWT middleware", () =>{
       method: "POST"
     })
     saveRes = MockResponseWithCookies();
-    const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken"}, "badSecret", { expiresIn: "1h" });
+    const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken", roles:"user"}, "badSecret", { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     await waitForRouteHandlerCompletion(jwtMiddleware,req,saveRes);
     expect(saveRes.statusCode).toBe(401);
@@ -136,7 +136,7 @@ describe("Testing JWT middleware", () =>{
       method: "POST"
     })
     saveRes = MockResponseWithCookies();
-    const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const jwtCookie = jwt.sign({id: 5, csrfToken: "badToken",roles:"user"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     if (!req.headers) {
       req.headers={};
@@ -150,7 +150,7 @@ describe("Testing JWT middleware", () =>{
       method: "POST"
     })
     saveRes = MockResponseWithCookies();
-    const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken", roles:"user"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     req.cookies = {jwt: jwtCookie }
     if (!req.headers) {
       req.headers={};
@@ -161,7 +161,7 @@ describe("Testing JWT middleware", () =>{
   });
 it("65.Returns a 401 if the JWT is valid but the CSRF token isn't.", async ()=>{
     saveRes = MockResponseWithCookies();
-    const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken"}, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const jwtCookie = jwt.sign({id: 5, csrfToken: "goodtoken", roles:"user"}, process.env.JWT_SECRET, { expiresIn: "1h" });
     const req = httpMocks.createRequest({
       method: "POST"
     })

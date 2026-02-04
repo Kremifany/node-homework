@@ -5,6 +5,9 @@ const crypto = require("crypto");
 const util = require("util");
 const scrypt = util.promisify(crypto.scrypt);
 const  prisma  = require("../db/prisma");
+const { randomUUID } = require("crypto");
+const jwt = require("jsonwebtoken");
+
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -12,14 +15,35 @@ async function hashPassword(password) {
   return `${salt}:${derivedKey.toString("hex")}`;
 }
 
+
+
+const cookieFlags = (req) => {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // only when HTTPS is available
+    sameSite: "Strict",
+  };
+};
+
+const setJwtCookie = (req, res, user) => {
+  // Sign JWT
+  const payload = { id: user.id, csrfToken: randomUUID() };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }); // 1 hour expiration
+  // Set cookie.  Note that the cookie flags have to be different in production and in test.
+  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 }); // 1 hour expiration
+  return payload.csrfToken; // this is needed in the body returned by logon() or register()
+};
+
+
 async function comparePassword(inputPassword, storedHash) {
   const [salt, key] = storedHash.split(":");
   const keyBuffer = Buffer.from(key, "hex");
   const derivedKey = await scrypt(inputPassword, salt, 64);
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
-}
+ }
 
-
+// You can now modify logon() and register()each return an appropriate body with
+// a name, an email, and the csrfToken, and so that they no longer reference a global user ID.
 //REGISTER FUNCTION
 const register =  async(req, res, next) => {
   if (!req.body) req.body = {};
@@ -64,17 +88,18 @@ try {
         userId: true,
         priority: true
       }
-    });
-
+    });    
     return { user: newUser, welcomeTasks };
   });
 
-  // Store the user ID globally for session management (not secure for production)
-  global.user_id = result.user.id;
-  
+  // // Store the user ID globally for session managem
+  // // ent (not secure for production)
+  // global.user_id = result.user.id;
+  const csrfToken = setJwtCookie(req, res, result.user);
   // Send response with status 201
   res.status(201);
   res.json({
+    csrfToken: csrfToken,
     user: result.user,
     welcomeTasks: result.welcomeTasks,
     transactionStatus: "success"
@@ -115,17 +140,17 @@ const logon = async (req, res) => {
     if(user){
         console.log("Found user for authentication: ", user);
         console.log("req.body.password: ", password);
-        const storedHash = user.hashedPassword || user.hashed_password;
+        const storedHash = user?.hashedPassword || user?.hashed_password;
         if (!storedHash) {
             return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Authentication Failed (No password set)" });
         }
           const isMatch = await comparePassword(password, storedHash)
           if(isMatch) {
-            global.user_id = user.id;
+            const csrfToken = setJwtCookie(req, res, user);
             console.log("Authentication succesfull: ", user);
             return res
             .status(StatusCodes.OK)
-            .json({ name : user.name,  email : user.email});
+            .json({ name : user.name,  email : user.email, csrfToken : csrfToken });
           }
         }
         return res
@@ -138,7 +163,7 @@ const logon = async (req, res) => {
 }
 
 const logoff = (req, res) =>{
-    global.user_id = null;
+    res.clearCookie("jwt", cookieFlags(req))
     res.sendStatus(200)
 }
 

@@ -10,6 +10,7 @@ const {
   create,
   update,
   deleteTask,
+  bulkMutate,
 } = require("../controllers/taskController");
 
 // a few useful globals
@@ -222,6 +223,62 @@ describe(" testing the update and delete of tasks.", () => {
         expect(saveRes.statusCode).toBe(404);
     });
 
+});
+
+describe("bulk task operations", () => {
+  let taskIds = [];
+
+  beforeEach(async () => {
+    await prisma.Task.deleteMany({ where: { userId: user1.id } });
+    const taskA = await prisma.Task.create({
+      data: { title: "bulk task 1", isCompleted: false, priority: "low", userId: user1.id },
+    });
+    const taskB = await prisma.Task.create({
+      data: { title: "bulk task 2", isCompleted: false, priority: "medium", userId: user1.id },
+    });
+    const taskC = await prisma.Task.create({
+      data: { title: "bulk task 3", isCompleted: true, priority: "high", userId: user1.id },
+    });
+    taskIds = [taskA.id, taskB.id, taskC.id];
+  })
+//
+  it("32.1. Bulk update matches query criteria.", async () => {
+    const req = httpMocks.createRequest({
+      method: "PATCH",
+      query: { isCompleted: "false" },
+      body: { isCompleted: true },
+    });
+    req.user = { id: user1.id };
+    saveRes = httpMocks.createResponse({ eventEmitter: EventEmitter });
+    await waitForRouteHandlerCompletion(bulkMutate, req, saveRes);
+    expect(saveRes.statusCode).toBe(200);
+    const payload = saveRes._getJSONData();
+    expect(payload.updated).toBe(2);
+
+    const updatedTasks = await prisma.Task.findMany({
+      where: { id: { in: taskIds }, userId: user1.id },
+    });
+    expect(updatedTasks.filter((task) => task.isCompleted).length).toBe(3);
+  });
+
+  it("32.2. Bulk delete removes tasks by id list.", async () => {
+    const req = httpMocks.createRequest({
+      method: "DELETE",
+      body: { ids: taskIds.slice(0, 2) },
+    });
+    req.user = { id: user1.id };
+    saveRes = httpMocks.createResponse({ eventEmitter: EventEmitter });
+    await waitForRouteHandlerCompletion(bulkMutate, req, saveRes);
+    expect(saveRes.statusCode).toBe(200);
+    const payload = saveRes._getJSONData();
+    expect(payload.deleted).toBe(2);
+
+    const remainingTasks = await prisma.Task.findMany({
+      where: { userId: user1.id },
+    });
+    expect(remainingTasks.length).toBe(1);
+    expect(remainingTasks[0].id).toBe(taskIds[2]);
+  });
 });
 
 afterAll(() => {

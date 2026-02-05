@@ -246,7 +246,70 @@ const bulkCreate = async (req, res, next) => {
   }
 };
 
+// Bulk update/delete specified by filter and specific ids of tasks
+
+const bulkMutate = async (req, res, next) => {
+  if (!req.body) req.body = {};
+  const whereClause = { userId: req.user.id };
+  const { isCompleted, priority } = req.query ?? {};//filters
+  const { ids, ...data } = req.body;
+  const isDelete = req.method === "DELETE";//determine if it's delete or update
+
+  //filter by isCompleted
+  if (isCompleted !== undefined) {
+    if (!["true", "false"].includes(isCompleted)) {
+      return res.status(400).json({ message: "Invalid isCompleted filter value." });
+    }
+    whereClause.isCompleted = isCompleted === "true";
+  }
+  //filter by priority
+  if (priority !== undefined) {
+    const allowedPriorities = ["low", "medium", "high"];
+    if (!allowedPriorities.includes(priority)) {
+      return res.status(400).json({ message: "Invalid priority filter value." });
+    }
+    whereClause.priority = priority;
+  }
+
+  if (ids !== undefined) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids array is empty or not an array." });
+    }
+    //filter by ids
+    whereClause.id = { in: ids };
+  }
+
+  if (!whereClause.id && isCompleted === undefined && priority === undefined) {
+    return res.status(400).json({ message: "No filter criteria were provided for the bulk operation." });
+  }
+
+  try {
+    if (isDelete) {
+      const result = await prisma.task.deleteMany({ where: whereClause });
+      if (!result.count) {
+        return res.status(404).json({ message: "No tasks matched the supplied criteria." });
+      }
+      return res.status(200).json({ deleted: result.count });
+    }
+
+    const { patchTaskSchema } = require('../validation/taskSchema');
+
+    const { error } = patchTaskSchema.validate(data, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({ message: "Invalid update data.", details: error.details });
+    }
+
+    //BULK UPDATE 
 
 
+    const result = await prisma.task.updateMany({ where: whereClause, data: data });
+    if (!result.count) {
+      return res.status(404).json({ message: "No tasks matched the supplied criteria." });
+    }
+    return res.status(200).json({ updated: result.count });
+  } catch (err) {
+    return next(err);
+  }
+};
 
-module.exports = { create, deleteTask, index, update, show, bulkCreate };
+module.exports = { create, deleteTask, index, update, show, bulkCreate, bulkMutate };

@@ -16,16 +16,21 @@ async function hashPassword(password) {
 }
 
 
-
-const cookieFlags = (req) => {
+// Cookie flags for setting and clearing cookies
+function cookieFlags(req) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // only when HTTPS is available
     sameSite: "Strict",
   };
-};
+}
 
-//how your JWT token generation and signing process:
+// how your JWT token generation and signing process:
+//1. Create a payload that includes the user's ID, a CSRF token, and any roles the user has.
+//2. Sign the JWT using a secret key stored in an environment variable, with an expiration time of 1 hour.
+//3. Set the JWT as a cookie in the response, using appropriate cookie flags for security.
+//4. Return the CSRF token to the client in the response body for use in subsequent requests.
+
 const setJwtCookie = (req, res, user) => {
   // Sign JWT
   const payload = { id: user.id, csrfToken: randomUUID(), roles: user.roles || [] };
@@ -43,9 +48,8 @@ async function comparePassword(inputPassword, storedHash) {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
  }
 
-// You can now modify logon() and register()each return an appropriate body with
-// a name, an email, and the csrfToken, and so that they no longer reference a global user ID.
-//REGISTER FUNCTION
+
+ //REGISTER FUNCTION
 const register =  async(req, res, next) => {
   if (!req.body) req.body = {};
   console.log("RAW BODY:",Object.entries(req.body).map(([k, v]) => [k, JSON.stringify(v), v?.length]));
@@ -92,7 +96,12 @@ const register =  async(req, res, next) => {
   value.password = null; // remove plain password
   const name = value.name;
   const email = value.email;
-////
+// Use a transaction to create the user and the welcome tasks atomically
+// This ensures that either both the user and tasks are created, or neither are, maintaining data integrity
+// Also, it reduces the number of database calls
+// Note: Prisma transactions can be used with async/await as shown below
+// See https://www.prisma.io/docs/concepts/components/prisma-client/transactions for more details
+// Here we create the user, then create the welcome tasks, and finally return both the user and the created tasks
 try {
   const result = await prisma.$transaction(async (tx) => {
     // Create user account (similar to Assignment 6, but using tx instead of prisma)
@@ -126,11 +135,9 @@ try {
     return { user: newUser, welcomeTasks };
   });
 
-  // // Store the user ID globally for session managem
-  // // ent (not secure for production)
-  // global.user_id = result.user.id;
+// Set JWT cookie and return response with CSRF token and user info 
   const csrfToken = setJwtCookie(req, res, result.user);
-  // Send response with status 201
+  // Send response with status 201 
   res.status(201);
   res.json({
     csrfToken: csrfToken,

@@ -7,7 +7,7 @@ const scrypt = util.promisify(crypto.scrypt);
 const  prisma  = require("../db/prisma");
 const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
-
+const { OAuth2Client } = require("google-auth-library");
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -195,7 +195,55 @@ const logon = async (req, res) => {
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing logon."+err.message });
       }  
 }
+//GOOGLE LOGON FUNCTION
+const googleLogon = async (req, res, next) => {
+  if (!req.body || !req.body.code) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ message: "Authorization code is required." });
+  }
+  const code = req.body.code;
+  try {
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+    const { tokens } = await client.getToken(code);
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email?.trim();
+    if (!email) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Google did not provide an email. Please grant email permission and try again.",
+      });
+    }
+    const normalizedEmail = email.toLowerCase();
+    const name = (payload.name || "User").trim();
 
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) {
+      const placeholderHash = "d333gasjhdfgahjsdf"
+      user = await prisma.user.create({
+        data: { email: normalizedEmail, name, hashedPassword: placeholderHash },
+        select: { id: true, email: true, name: true },
+      });
+    } else {
+      user = { id: user.id, email: user.email, name: user.name };
+    }
+
+    const csrfToken = setJwtCookie(req, res, user);
+    return res.status(StatusCodes.OK).json({
+      name: user.name,
+      email: user.email,
+      csrfToken: csrfToken,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+//LOG OFF FUNCTION
 const logoff = (req, res) =>{
     res.clearCookie("jwt", cookieFlags(req))
     res.sendStatus(200)
@@ -236,4 +284,4 @@ const show = async (req, res) => {
   res.status(200).json(user);
 };
 
-module.exports = { register, logon, logoff, show };
+module.exports = { register, logon, logoff, show, googleLogon };

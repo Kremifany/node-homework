@@ -88,11 +88,12 @@ describe("test role based access control", () => {
         expect(saveRes.status).toBe(403);
     });
     it("58. Change the role of the user to manager in the database", async () => {
-        await prisma.User.update({
-            where: { email: "jdeerejr@example.com" },
+        const email = "jdeerejr@example.com";
+        await prisma.user.update({
+            where: { email },
             data: { roles: "manager" }
         });
-        const updatedUser = await prisma.User.findUnique({ where: { email: "jdeerejr@example.com" } });
+        const updatedUser = await prisma.user.findUnique({ where: { email } });
         expect(updatedUser.roles).toBe("manager");
     });
     

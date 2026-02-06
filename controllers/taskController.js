@@ -19,7 +19,6 @@ try {
     data: { title, isCompleted, priority, userId : req.user.id },
     select: { id: true, title: true, isCompleted: true, priority: true } // specify the column values to return
   });
-    console.log("status 201 - task created: ", task);
     return  res.status(StatusCodes.CREATED).json(task);
 } catch (err) {
       return next(err);
@@ -88,6 +87,7 @@ if (req.query.fields) {
   }
 } 
 // Get tasks with pagination and eager loading
+try{
 const tasks = await prisma.task.findMany({
   where: whereClause,
   select: { 
@@ -103,6 +103,9 @@ const tasks = await prisma.task.findMany({
   take: limit,
   orderBy: { createdAt: 'desc' }
 });
+if(tasks.length === 0) {
+    return res.status(404).json({ message: "No tasks found."})
+}
 
 // Get total count for pagination metadata
 const totalTasks = await prisma.task.count({
@@ -123,6 +126,13 @@ const pagination = {
   tasks,
   pagination
 });
+} catch (err) {
+  if (err.code === "P2025" ) {
+    return res.status(404).json({ message: "The task was not found."})
+  } else {
+    return next(err); // pass other errors to the global error handler
+  } 
+}
 }
 
 

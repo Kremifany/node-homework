@@ -25,6 +25,7 @@ const cookieFlags = (req) => {
   };
 };
 
+//how your JWT token generation and signing process:
 const setJwtCookie = (req, res, user) => {
   // Sign JWT
   const payload = { id: user.id, csrfToken: randomUUID() };

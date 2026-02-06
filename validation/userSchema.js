@@ -5,8 +5,8 @@ const userSchema = Joi.object({
   name: Joi.string().trim().min(3).max(30).required(),
   password: Joi.string()
     .trim()
-    .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$/)
+    // .min(8)
+    // .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$/)
     .required()
     .messages({
       "string.pattern.base":

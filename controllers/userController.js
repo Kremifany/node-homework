@@ -78,8 +78,7 @@ const register =  async(req, res, next) => {
     process.env.RECAPTCHA_BYPASS &&
     req.get("X-Recaptcha-Test") === process.env.RECAPTCHA_BYPASS
   ) {
-    // might be a test environment
-    isPerson = true;
+      isPerson = true;
   }
   if (!isPerson) {
     return res
@@ -229,22 +228,64 @@ const googleLogon = async (req, res, next) => {
     const normalizedEmail = email.toLowerCase();
     const name = (payload.name || "User").trim();
 
-    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) {
-      const placeholderHash = "d333gasjhdfgahjsdf"
-      user = await prisma.user.create({
-        data: { email: normalizedEmail, name, hashedPassword: placeholderHash },
-        select: { id: true, email: true, name: true },
+    // Check if user already exists
+    let existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    
+    if (existingUser) {
+      // User exists - just log them in (like simple logon)
+      const csrfToken = setJwtCookie(req, res, existingUser);
+      return res.status(StatusCodes.OK).json({
+        name: existingUser.name,
+        email: existingUser.email,
+        roles: existingUser.roles,
+        csrfToken: csrfToken,
       });
-    } else {
-      user = { id: user.id, email: user.email, name: user.name };
     }
 
-    const csrfToken = setJwtCookie(req, res, user);
-    return res.status(StatusCodes.OK).json({
-      name: user.name,
-      email: user.email,
+    // New user - create with transaction and welcome tasks (like register)
+    const placeholderHash = "google-oauth-no-password";
+    
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user account
+      const newUser = await tx.user.create({
+        data: { email: normalizedEmail, name, hashedPassword: placeholderHash },
+        select: { id: true, email: true, name: true }
+      });
+
+      // Create 3 welcome tasks using createMany
+      const welcomeTaskData = [
+        { title: "Complete your profile", userId: newUser.id, priority: "medium" },
+        { title: "Add your first task", userId: newUser.id, priority: "high" },
+        { title: "Explore the app", userId: newUser.id, priority: "low" }
+      ];
+      await tx.task.createMany({ data: welcomeTaskData });
+
+      // Fetch the created tasks to return them
+      const welcomeTasks = await tx.task.findMany({
+        where: {
+          userId: newUser.id,
+          title: { in: welcomeTaskData.map(t => t.title) }
+        },
+        select: {
+          id: true,
+          title: true,
+          isCompleted: true,
+          userId: true,
+          priority: true
+        }
+      });
+      
+      return { user: newUser, welcomeTasks };
+    });
+
+    // Set JWT cookie and return response with CSRF token and user info
+    // Response format matches register endpoint: { user, csrfToken, welcomeTasks, transactionStatus }
+    const csrfToken = setJwtCookie(req, res, result.user);
+    return res.status(StatusCodes.CREATED).json({
       csrfToken: csrfToken,
+      user: result.user,
+      welcomeTasks: result.welcomeTasks,
+      transactionStatus: "success"
     });
   } catch (err) {
     return next(err);

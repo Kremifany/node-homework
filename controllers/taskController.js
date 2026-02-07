@@ -52,7 +52,7 @@ const task = await prisma.task.delete({
 
 //INDEX TASKS
 // Get all tasks for logged in user
-const index = async(req,res) => { 
+const index = async(req,res,next) => { 
 // Parse pagination parameters
 console.log("Task Controller\n")
 

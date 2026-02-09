@@ -1,7 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
-const {create, index, deleteTask, update, show, bulkCreate } = require("../controllers/taskController");
+const {create, index, deleteTask, update, show, bulkCreate, bulkMutate } = require("../controllers/taskController");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 
 router.use(jwtMiddleware);
@@ -11,6 +11,8 @@ router.route("/").get(index);
 router.route("/").post(create);
 
 router.route("/bulk").post(bulkCreate);
+router.route("/bulk").patch(bulkMutate);
+router.route("/bulk").delete(bulkMutate);
 
 router.route("/:id").delete(deleteTask);
 

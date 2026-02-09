@@ -7,7 +7,7 @@ const scrypt = util.promisify(crypto.scrypt);
 const  prisma  = require("../db/prisma");
 const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
-
+const { OAuth2Client } = require("google-auth-library");
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -16,19 +16,24 @@ async function hashPassword(password) {
 }
 
 
-
-const cookieFlags = (req) => {
+// Cookie flags for setting and clearing cookies
+function cookieFlags(req) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // only when HTTPS is available
     sameSite: "Strict",
   };
-};
+}
 
-//how your JWT token generation and signing process:
+// how your JWT token generation and signing process:
+//1. Create a payload that includes the user's ID, a CSRF token, and any roles the user has.
+//2. Sign the JWT using a secret key stored in an environment variable, with an expiration time of 1 hour.
+//3. Set the JWT as a cookie in the response, using appropriate cookie flags for security.
+//4. Return the CSRF token to the client in the response body for use in subsequent requests.
+
 const setJwtCookie = (req, res, user) => {
   // Sign JWT
-  const payload = { id: user.id, csrfToken: randomUUID() };
+  const payload = { id: user.id, csrfToken: randomUUID(), roles: user.roles || [] };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }); // 1 hour expiration
   // Set cookie.  Note that the cookie flags have to be different in production and in test.
   res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 }); // 1 hour expiration
@@ -43,9 +48,8 @@ async function comparePassword(inputPassword, storedHash) {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
  }
 
-// You can now modify logon() and register()each return an appropriate body with
-// a name, an email, and the csrfToken, and so that they no longer reference a global user ID.
-//REGISTER FUNCTION
+
+ //REGISTER FUNCTION
 const register =  async(req, res, next) => {
   if (!req.body) req.body = {};
   console.log("RAW BODY:",Object.entries(req.body).map(([k, v]) => [k, JSON.stringify(v), v?.length]));
@@ -74,8 +78,7 @@ const register =  async(req, res, next) => {
     process.env.RECAPTCHA_BYPASS &&
     req.get("X-Recaptcha-Test") === process.env.RECAPTCHA_BYPASS
   ) {
-    // might be a test environment
-    isPerson = true;
+      isPerson = true;
   }
   if (!isPerson) {
     return res
@@ -92,7 +95,12 @@ const register =  async(req, res, next) => {
   value.password = null; // remove plain password
   const name = value.name;
   const email = value.email;
-////
+// Use a transaction to create the user and the welcome tasks atomically
+// This ensures that either both the user and tasks are created, or neither are, maintaining data integrity
+// Also, it reduces the number of database calls
+// Note: Prisma transactions can be used with async/await as shown below
+// See https://www.prisma.io/docs/concepts/components/prisma-client/transactions for more details
+// Here we create the user, then create the welcome tasks, and finally return both the user and the created tasks
 try {
   const result = await prisma.$transaction(async (tx) => {
     // Create user account (similar to Assignment 6, but using tx instead of prisma)
@@ -126,11 +134,9 @@ try {
     return { user: newUser, welcomeTasks };
   });
 
-  // // Store the user ID globally for session managem
-  // // ent (not secure for production)
-  // global.user_id = result.user.id;
+// Set JWT cookie and return response with CSRF token and user info 
   const csrfToken = setJwtCookie(req, res, result.user);
-  // Send response with status 201
+  // Send response with status 201 
   res.status(201);
   res.json({
     csrfToken: csrfToken,
@@ -184,7 +190,7 @@ const logon = async (req, res) => {
             console.log("Authentication succesfull: ", user);
             return res
             .status(StatusCodes.OK)
-            .json({ name : user.name,  email : user.email, csrfToken : csrfToken });
+            .json({ name : user.name,  email : user.email, roles: user.roles, csrfToken : csrfToken});
           }
         }
         return res
@@ -195,7 +201,97 @@ const logon = async (req, res) => {
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing logon."+err.message });
       }  
 }
+//GOOGLE LOGON FUNCTION
+const googleLogon = async (req, res, next) => {
+  if (!req.body || !req.body.code) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ message: "Authorization code is required." });
+  }
+  const code = req.body.code;
+  try {
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+    const { tokens } = await client.getToken(code);
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email?.trim();
+    if (!email) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Google did not provide an email. Please grant email permission and try again.",
+      });
+    }
+    const normalizedEmail = email.toLowerCase();
+    const name = (payload.name || "User").trim();
 
+    // Check if user already exists
+    let existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    
+    if (existingUser) {
+      // User exists - just log them in (like simple logon)
+      const csrfToken = setJwtCookie(req, res, existingUser);
+      return res.status(StatusCodes.OK).json({
+        name: existingUser.name,
+        email: existingUser.email,
+        roles: existingUser.roles,
+        csrfToken: csrfToken,
+      });
+    }
+
+    // New user - create with transaction and welcome tasks (like register)
+    const placeholderHash = "google-oauth-no-password";
+    
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user account
+      const newUser = await tx.user.create({
+        data: { email: normalizedEmail, name, hashedPassword: placeholderHash },
+        select: { id: true, email: true, name: true }
+      });
+
+      // Create 3 welcome tasks using createMany
+      const welcomeTaskData = [
+        { title: "Complete your profile", userId: newUser.id, priority: "medium" },
+        { title: "Add your first task", userId: newUser.id, priority: "high" },
+        { title: "Explore the app", userId: newUser.id, priority: "low" }
+      ];
+      await tx.task.createMany({ data: welcomeTaskData });
+
+      // Fetch the created tasks to return them
+      const welcomeTasks = await tx.task.findMany({
+        where: {
+          userId: newUser.id,
+          title: { in: welcomeTaskData.map(t => t.title) }
+        },
+        select: {
+          id: true,
+          title: true,
+          isCompleted: true,
+          userId: true,
+          priority: true
+        }
+      });
+      
+      return { user: newUser, welcomeTasks };
+    });
+
+    // Set JWT cookie and return response with CSRF token and user info
+    // Response format matches register endpoint: { user, csrfToken, welcomeTasks, transactionStatus }
+    const csrfToken = setJwtCookie(req, res, result.user);
+    return res.status(StatusCodes.CREATED).json({
+      csrfToken: csrfToken,
+      user: result.user,
+      welcomeTasks: result.welcomeTasks,
+      transactionStatus: "success"
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+//LOG OFF FUNCTION
 const logoff = (req, res) =>{
     res.clearCookie("jwt", cookieFlags(req))
     res.sendStatus(200)
@@ -236,4 +332,4 @@ const show = async (req, res) => {
   res.status(200).json(user);
 };
 
-module.exports = { register, logon, logoff, show };
+module.exports = { register, logon, logoff, show, googleLogon };

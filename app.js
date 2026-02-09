@@ -10,7 +10,8 @@ const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const { xss } = require("express-xss-sanitizer");
 const rateLimiter = require("express-rate-limit");
-
+const swagger = require('swagger-ui-express');  
+const swaggerDocument = require('./swagger.json');
 
 const app = express();
 app.set("trust proxy", 1);
@@ -38,7 +39,7 @@ app.use((req,res,next)=>{
 app.use("/api/users",userRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/analytics", analyticsRouter);
-
+app.use("/api-docs", swagger.serve, swagger.setup(swaggerDocument)); // Swagger UI route
 
 
 app.get('/health', async (req, res) => {

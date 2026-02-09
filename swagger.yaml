@@ -1,0 +1,649 @@
+openapi: 3.0.0
+info:
+  title: NodeHomework API
+  description: API for managing users, tasks, and analytics
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: '{baseUrl}'
+    description: Configurable base URL
+    variables:
+      baseUrl:
+        default: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Health Check
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /api/users:
+    post:
+      summary: Create User
+      operationId: postUsers
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+  /api/users/{userId}:
+    get:
+      summary: Show User By ID
+      operationId: showUserById
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 4
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+  /api/users/register:
+    post:
+      summary: Register New User
+      operationId: register
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Registration failed
+  /api/users/logon:
+    post:
+      summary: User Login
+      operationId: logon
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+  /api/users/logoff:
+    post:
+      summary: User Logout
+      operationId: logoff
+      tags:
+        - Authentication
+      security:
+        - csrfToken: []
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          description: Unauthorized
+  /api/tasks:
+    get:
+      summary: Get All Logged In User Tasks Or Find Specific Task By Title
+      operationId: getAllLoggedInUserTasksOrFindSpecificTaskByTitle
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          example: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          example: 2
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, title, priority]
+          example: createdAt
+        - name: title
+          in: query
+          schema:
+            type: string
+          description: Search tasks by title
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create Task
+      operationId: createTask
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskInput'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+  /api/tasks/{taskId}:
+    get:
+      summary: Show Task
+      operationId: showTask
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 2
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+        '401':
+          description: Unauthorized
+    patch:
+      summary: Update Task
+      operationId: updateTask
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateInput'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+        '404':
+          description: Task not found
+        '401':
+          description: Unauthorized
+    delete:
+      summary: Delete Task
+      operationId: deleteTask
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Task deleted successfully
+        '404':
+          description: Task not found
+        '401':
+          description: Unauthorized
+  /api/tasks/bulk:
+    post:
+      summary: Create Tasks Bulk
+      operationId: createTaskBulk
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tasks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TaskInput'
+      responses:
+        '201':
+          description: Tasks created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+    patch:
+      summary: Update Tasks Bulk
+      operationId: updateTasksBulk
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tasks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      title:
+                        type: string
+                      isCompleted:
+                        type: boolean
+                      priority:
+                        type: string
+                        enum: [low, medium, high]
+      responses:
+        '200':
+          description: Tasks updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+    delete:
+      summary: Delete Tasks Bulk
+      operationId: deleteTasksBulk
+      tags:
+        - Tasks
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskIds:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Tasks deleted successfully
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+  /api/analytics/users:
+    get:
+      summary: Get Users With Incompleted Tasks And Pagination
+      operationId: getUsersWithIncompletedTasksAndPagination
+      tags:
+        - Analytics
+      security:
+        - csrfToken: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Users with incomplete tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserWithTasks'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+  /api/analytics/users/:
+    get:
+      summary: Get Users Analytics
+      operationId: getUsersAnalytics
+      tags:
+        - Analytics
+      security:
+        - csrfToken: []
+      responses:
+        '200':
+          description: Users analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                  activeUsers:
+                    type: integer
+                  usersWithTasks:
+                    type: integer
+        '401':
+          description: Unauthorized
+  /api/analytics/tasks/search:
+    get:
+      summary: Tasks Search
+      operationId: tasksSearch
+      tags:
+        - Analytics
+      security:
+        - csrfToken: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          example: tas
+          description: Search query for tasks
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+components:
+  securitySchemes:
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN
+      description: CSRF token for authenticated requests
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserInput:
+      type: object
+      required:
+        - username
+        - email
+      properties:
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+    RegisterInput:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+    LoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        csrfToken:
+          type: string
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: TaskGood
+        isCompleted:
+          type: boolean
+          example: false
+        priority:
+          type: string
+          enum: [low, medium, high]
+          example: medium
+        userId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TaskInput:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: TaskGood
+        isCompleted:
+          type: boolean
+          default: false
+          example: false
+        priority:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+          example: medium
+    TaskUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        isCompleted:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+    UserWithTasks:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        incompleteTasks:
+          type: integer
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 10
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Users
+    description: User management operations
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Tasks
+    description: Task management operations
+  - name: Analytics
+    description: Analytics and reporting endpoints

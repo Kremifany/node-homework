@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { StatusCodes } = require("http-status-codes");
+const { request } = require("express");
 
 const send401 = (res) => {
   res
@@ -17,7 +18,8 @@ module.exports = async (req, res, next) => {
     if (err) {
       return send401(res);
     }
-    req.user = { id: decoded.id }; 
+    req.user = { id: decoded.id, roles: decoded.roles || [] }; 
+    console.log("Decoded JWT for user roles:", req.user.roles);
     // this is where the id is kept for subsequent use in access control.  We
  
     if ( ["POST", "PATCH", "PUT", "DELETE", "CONNECT"].includes(req.method)) {

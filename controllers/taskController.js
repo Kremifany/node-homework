@@ -250,7 +250,8 @@ const bulkCreate = async (req, res, next) => {
 
 const bulkMutate = async (req, res, next) => {
   if (!req.body) req.body = {};
-  const whereClause = { userId: req.user.id };
+  //only manager role of user can do bulk operations
+  const whereClause = {};
   const { isCompleted, priority } = req.query ?? {};//filters
   const { ids, ...data } = req.body;
   const isDelete = req.method === "DELETE";//determine if it's delete or update
@@ -294,7 +295,7 @@ const bulkMutate = async (req, res, next) => {
 
     const { patchTaskSchema } = require('../validation/taskSchema');
 
-    const { error } = patchTaskSchema.validate(data, { abortEarly: false });
+    const { error, value } = patchTaskSchema.validate(data, { abortEarly: false });
     if (error) {
       return res.status(400).json({ message: "Invalid update data.", details: error.details });
     }
@@ -302,7 +303,7 @@ const bulkMutate = async (req, res, next) => {
     //BULK UPDATE 
 
 
-    const result = await prisma.task.updateMany({ where: whereClause, data: data });
+    const result = await prisma.task.updateMany({ where: whereClause, data: value });
     if (!result.count) {
       return res.status(404).json({ message: "No tasks matched the supplied criteria." });
     }

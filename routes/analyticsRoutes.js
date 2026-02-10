@@ -5,8 +5,8 @@ const router = express.Router();
 const { getUserAnalytics }  = require("../controllers/analyticsController");
 const { getUsersWithStats } = require("../controllers/analyticsController");
 const { searchTasks } = require ("../controllers/analyticsController");
-const roleMiddleware = require("../middleware/roleMiddleware");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
 
 router.use(jwtMiddleware);
 router.use(roleMiddleware);
